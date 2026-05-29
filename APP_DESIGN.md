@@ -24,6 +24,20 @@ App returns:
 
 > A complete ArtTrail with a confidence note, observation guide, route choices, related artwork comparison cards with images, map search terms, location guidance, and a 3 to 5 stop mini trail.
 
+### 0. Warmup Before a Photo
+
+User says:
+
+> Hi, I am in Berlin Hamburger Bahnhof Museum.
+
+Model action:
+
+> Call `warmup_artwise` with the user's location context.
+
+App returns:
+
+> A short greeting that tells the user to take one clear artwork photo and optionally add a preference: artist, history, technique, theme, related works, or quick walking trail.
+
 ### 2. Photo Plus Museum Context
 
 User says:
@@ -54,8 +68,12 @@ App returns:
 
 ## Tool Contract
 
+- Tool: `warmup_artwise`
+- Intent: help the user start before they have uploaded an artwork photo.
+- Output: one short prompt, no dashboard, no form.
+
 - Tool: `generate_art_trail`
 - Intent: generate a connected museum exploration trail from one photographed or described artwork.
 - Inputs: optional and model-filled from the user's photo and conversation.
-- Output: front-loaded data for a single complete response or one view.
+- Output: front-loaded data for a single complete response or one view, including quick read, route choices, related artwork image cards, a schematic trail map, and stop-by-stop location guidance.
 - Do not add separate tools for route steps, artwork cards, location details, or follow-up questions unless a new user intent appears.

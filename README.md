@@ -27,7 +27,17 @@ The intended user flow is:
 
 No database, authentication, crawler, museum API, indoor navigation, or custom image recognition model is required for this hack-night version.
 
-## Tool
+## Tools
+
+### `warmup_artwise`
+
+Use this when the user greets ArtWise, says where they are, or asks how to start before uploading a photo.
+
+It returns a short museum-friendly prompt:
+
+- Take one clear artwork photo.
+- Optionally add the museum or gallery name.
+- Optionally say whether you prefer artist, history, technique, theme, related works, or a quick walking trail.
 
 ### `generate_art_trail`
 
@@ -51,6 +61,7 @@ The tool returns front-loaded `structuredContent` and visible text for ChatGPT, 
 - `confidence_note`
 - `guided_options`
 - `related_artwork_cards`
+- `trail_map`
 - `location_detail_plan`
 - `suggested_mini_trail`
 - `how_to_explore_without_repeated_photos`
@@ -62,6 +73,12 @@ In ChatGPT, connect the app through the Skybridge MCP URL, select ArtWise, uploa
 
 ```text
 Use ArtWise to create a suggested museum trail from this photo. For every trail stop, include the related artwork image, approximate museum location guidance, and map search terms.
+```
+
+If the user has not uploaded a photo yet:
+
+```text
+Hi, I am in a museum. How should I start?
 ```
 
 If ChatGPT needs an explicit instruction to call the tool:

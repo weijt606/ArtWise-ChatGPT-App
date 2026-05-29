@@ -12,7 +12,13 @@ export default function ToolCall() {
 
   useEffect(() => {
     if (data) {
-      setBrief(data.structuredContent.current_artwork_brief);
+      setBrief(
+        (
+          data.structuredContent as
+            | { current_artwork_brief?: string }
+            | undefined
+        )?.current_artwork_brief ?? null,
+      );
     }
   }, [data]);
 

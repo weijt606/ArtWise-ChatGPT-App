@@ -49,6 +49,63 @@ function inferMovement(description: string, interest: string) {
   return "the period, movement, and visual tradition suggested by the wall label";
 }
 
+function inferSubject(description: string, interest: string) {
+  const text = `${description} ${interest}`.toLowerCase();
+
+  if (
+    text.includes("leisure") ||
+    text.includes("luncheon") ||
+    text.includes("boating") ||
+    text.includes("social") ||
+    text.includes("café") ||
+    text.includes("cafe") ||
+    text.includes("outdoor")
+  ) {
+    return "modern leisure, social life, and everyday experience";
+  }
+
+  if (text.includes("portrait") || text.includes("pose") || text.includes("figure")) {
+    return "the figure, pose, identity, and social presence";
+  }
+
+  if (text.includes("landscape") || text.includes("garden") || text.includes("water")) {
+    return "landscape, atmosphere, weather, and light";
+  }
+
+  if (text.includes("religious") || text.includes("saint") || text.includes("altar")) {
+    return "religious narrative, devotion, and symbolic detail";
+  }
+
+  if (text.includes("abstract") || text.includes("nonrepresentational")) {
+    return "color, form, rhythm, surface, and spatial tension";
+  }
+
+  return "the main subject and visual clues visible in the photo";
+}
+
+function inferTechnique(description: string, movement: string) {
+  const text = `${description} ${movement}`.toLowerCase();
+
+  if (
+    text.includes("impression") ||
+    text.includes("loose brushwork") ||
+    text.includes("soft light") ||
+    text.includes("dappled")
+  ) {
+    return "loose visible brushwork, broken color, and attention to light";
+  }
+
+  if (text.includes("flat") || text.includes("decorative") || text.includes("symbol")) {
+    return "flattened color, simplified forms, and symbolic composition";
+  }
+
+  if (text.includes("dramatic light") || text.includes("baroque")) {
+    return "strong light contrast, theatrical composition, and heightened gesture";
+  }
+
+  return "composition, color, material, surface, light, and handling";
+}
+
 function getRelatedArtworkCards(movement: string, knownNearbyArtworks: string) {
   const text = `${movement} ${knownNearbyArtworks}`.toLowerCase();
 
@@ -180,17 +237,158 @@ function getRelatedArtworkCards(movement: string, knownNearbyArtworks: string) {
   ];
 }
 
+function svgDataUri(svg: string) {
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+function buildTrailMapSvg(
+  museum: string,
+  room: string,
+  trail: Array<{
+    stop: string;
+    recommended_artwork: string;
+    recommended_artist: string;
+  }>,
+) {
+  const short = (value: string, max = 24) =>
+    value.length > max ? `${value.slice(0, max - 1)}…` : value;
+  const nodes = [
+    { x: 88, y: 92 },
+    { x: 260, y: 92 },
+    { x: 432, y: 92 },
+    { x: 432, y: 238 },
+    { x: 260, y: 238 },
+  ];
+  const lines = nodes
+    .slice(1)
+    .map((node, index) => {
+      const previous = nodes[index];
+      return `<line x1="${previous.x}" y1="${previous.y}" x2="${node.x}" y2="${node.y}" stroke="#7C6F64" stroke-width="3" stroke-dasharray="8 7" />`;
+    })
+    .join("");
+  const labels = trail
+    .map((stop, index) => {
+      const node = nodes[index];
+      return `
+        <g>
+          <circle cx="${node.x}" cy="${node.y}" r="30" fill="#F3EEE7" stroke="#3E3A36" stroke-width="2" />
+          <text x="${node.x}" y="${node.y + 6}" text-anchor="middle" font-size="18" font-family="Arial" font-weight="700" fill="#24211F">${index + 1}</text>
+          <text x="${node.x}" y="${node.y + 49}" text-anchor="middle" font-size="13" font-family="Arial" font-weight="700" fill="#24211F">${short(stop.recommended_artwork, 22)}</text>
+          <text x="${node.x}" y="${node.y + 67}" text-anchor="middle" font-size="11" font-family="Arial" fill="#625B54">${short(stop.recommended_artist, 24)}</text>
+        </g>`;
+    })
+    .join("");
+
+  const subtitle = room
+    ? `${room} · verify exact locations on the museum map`
+    : `${museum} · use map search and wall labels`;
+
+  return svgDataUri(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="520" height="340" viewBox="0 0 520 340">
+      <rect width="520" height="340" rx="18" fill="#FBFAF7" />
+      <rect x="24" y="28" width="472" height="284" rx="14" fill="#FFFFFF" stroke="#D9D1C7" />
+      <text x="44" y="58" font-size="18" font-family="Arial" font-weight="700" fill="#24211F">Suggested museum trail</text>
+      <text x="44" y="79" font-size="12" font-family="Arial" fill="#625B54">${short(subtitle, 66)}</text>
+      ${lines}
+      ${labels}
+      <text x="44" y="294" font-size="11" font-family="Arial" fill="#7C6F64">Approximate guide only. Follow current wall labels and museum map.</text>
+    </svg>
+  `);
+}
+
+const fallbackArtworkImages = [
+  "https://upload.wikimedia.org/wikipedia/commons/6/61/Claude_Monet_-_The_Saint-Lazare_Station_-_Google_Art_Project.jpg",
+  "https://upload.wikimedia.org/wikipedia/commons/1/1f/Edgar_Degas_-_In_a_Caf%C3%A9_-_Google_Art_Project.jpg",
+  "https://upload.wikimedia.org/wikipedia/commons/5/5c/Edouard_Manet_-_Olympia_-_Google_Art_Project_3.jpg",
+  "https://upload.wikimedia.org/wikipedia/commons/f/ff/Camille_Pissarro_-_Boulevard_Montmartre%2C_Spring_-_Google_Art_Project.jpg",
+];
+
+function requiredArtworkImage(imageUrl: string | undefined, index: number) {
+  return clean(imageUrl) || fallbackArtworkImages[index % fallbackArtworkImages.length];
+}
+
 const server = new McpServer(
   {
     name: "ArtWise",
     version: "0.0.1",
   },
   { capabilities: {} },
-).registerTool(
+)
+  .registerTool(
+    {
+      name: "warmup_artwise",
+      description:
+        "Use this when the user greets ArtWise, says where they are, or asks how to start before uploading an artwork photo. This is only for onboarding before an artwork photo is available.",
+      inputSchema: {
+        visitor_message: z
+          .string()
+          .optional()
+          .describe("The user's greeting or location context."),
+        museum_or_location: z
+          .string()
+          .optional()
+          .describe("Museum, city, station, or rough location if the user mentioned one."),
+      },
+      annotations: {
+        title: "Start ArtWise",
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: false,
+      },
+      _meta: {
+        "openai/toolInvocation/invoking": "Getting ArtWise ready…",
+        "openai/toolInvocation/invoked": "ArtWise is ready.",
+      },
+    },
+    async (input) => {
+      const location = clean(input.museum_or_location);
+      const contextLine = location
+        ? `You are at or near ${location}.`
+        : "You can start from any museum gallery.";
+      const structuredContent = {
+        greeting: "Hi, I am ArtWise.",
+        short_response:
+          `${contextLine} Take one clear photo of an artwork, and I will turn it into a short museum trail.`,
+        what_to_send_next: [
+          "A photo of the artwork.",
+          "Optional: the museum or gallery name if you know it.",
+          "Optional: whether you prefer the artist, historical background, technique, theme, or nearby comparisons.",
+        ],
+        example_preferences: [
+          "I want to understand the artist.",
+          "I care more about the historical background.",
+          "Show me nearby related works with images.",
+          "Make it quick. I am walking through the gallery.",
+        ],
+        next_prompt:
+          "Upload one artwork photo and add a preference if you have one.",
+      };
+
+      return {
+        structuredContent,
+        content: [
+          {
+            type: "text",
+            text:
+              `Hi, I am ArtWise. ${contextLine}\n\n` +
+              "Take one clear photo of an artwork. If you want, add a preference:\n" +
+              "- artist\n" +
+              "- historical background\n" +
+              "- technique and visual details\n" +
+              "- related works nearby\n" +
+              "- a quick walking trail\n\n" +
+              "Then I will give you a concise ArtTrail with related images, map search terms, and approximate location guidance.",
+          },
+        ],
+        isError: false,
+      };
+    },
+  )
+  .registerTool(
   {
     name: "generate_art_trail",
     description:
-      "Use this when the user shares one museum artwork photo or a short artwork description and wants a connected museum exploration trail. If the user only provides a photo, infer cautious visual context from the image and pass unknown text fields as empty or Unknown.",
+      "Use this whenever the user selects ArtWise and shares a museum artwork photo, artwork description, or asks for a museum trail, related artworks, comparison images, where to go next, map search terms, or location guidance. Do not just identify or explain the artwork; generate the full ArtWise trail. The final answer must preserve the image-backed related artwork cards and the mini-trail location guidance from this tool result. If the user only provides a photo, infer cautious visual context from the image and pass unknown text fields as empty or Unknown.",
     inputSchema: {
       visitor_request: z
         .string()
@@ -236,6 +434,15 @@ const server = new McpServer(
       destructiveHint: false,
       openWorldHint: false,
     },
+    view: {
+      component: "art-trail",
+      description:
+        "A compact museum guide with artwork details, related artwork images, and a suggested mini trail.",
+      prefersBorder: true,
+      csp: {
+        resourceDomains: ["https://upload.wikimedia.org"],
+      },
+    },
     _meta: {
       "openai/toolInvocation/invoking": "Building your ArtTrail…",
       "openai/toolInvocation/invoked": "ArtTrail ready.",
@@ -256,6 +463,8 @@ const server = new McpServer(
     const nearbyText = clean(input.known_nearby_artworks);
     const nearby = splitNearbyArtworks(nearbyText);
     const movement = inferMovement(description, interest);
+    const subject = inferSubject(description, interest);
+    const technique = inferTechnique(description, movement);
     const locationPhrase = room
       ? `${room} at ${museum}`
       : `${museum}, using the museum map or nearby wall labels`;
@@ -277,14 +486,20 @@ const server = new McpServer(
             "Nearby, search for artworks with similar subjects, poses, color harmonies, materials, or lighting.",
             "Ask the museum map for galleries organized by artist, movement, period, or national school.",
           ];
-    const relatedArtworkCards = getRelatedArtworkCards(movement, nearbyText);
+    const relatedArtworkCards = getRelatedArtworkCards(movement, nearbyText).map(
+      (card, index) => ({
+        ...card,
+        image_url: requiredArtworkImage(card.image_url, index),
+        image_required: true,
+      }),
+    );
 
     const suggestedMiniTrail = [
       {
         stop: "1. Begin with the photographed work",
         recommended_artwork: titleKnown ? title : "The uploaded artwork",
         recommended_artist: artistKnown ? artist : "Verify from the wall label",
-        image_url: "",
+        image_url: requiredArtworkImage(undefined, 0),
         location_guidance: room
           ? `Start exactly where you are now: ${room}. Use the wall label to confirm title, artist, date, and movement.`
           : "Start with the uploaded artwork and photograph/read its wall label if the title, artist, date, or room is unclear.",
@@ -304,7 +519,7 @@ const server = new McpServer(
         stop: "2. Find the closest match by artist or circle",
         recommended_artwork: relatedArtworkCards[0]?.title ?? "Same-artist comparison",
         recommended_artist: relatedArtworkCards[0]?.artist ?? "Verify from wall label",
-        image_url: relatedArtworkCards[0]?.image_url ?? "",
+        image_url: requiredArtworkImage(relatedArtworkCards[0]?.image_url, 0),
         location_guidance:
           relatedArtworkCards[0]?.likely_location_detail ??
           "Search the museum map for the artist name from the uploaded artwork, then check nearby rooms first.",
@@ -323,7 +538,7 @@ const server = new McpServer(
         stop: "3. Compare a work from the same movement or period",
         recommended_artwork: relatedArtworkCards[1]?.title ?? "Same-period comparison",
         recommended_artist: relatedArtworkCards[1]?.artist ?? "Nearby artist from the same period",
-        image_url: relatedArtworkCards[1]?.image_url ?? "",
+        image_url: requiredArtworkImage(relatedArtworkCards[1]?.image_url, 1),
         location_guidance:
           relatedArtworkCards[1]?.likely_location_detail ??
           "Search for the movement or date range shown on the uploaded artwork's wall label; prefer same-gallery or adjacent-room matches.",
@@ -339,7 +554,7 @@ const server = new McpServer(
         stop: "4. Follow the subject or theme",
         recommended_artwork: relatedArtworkCards[2]?.title ?? "Theme comparison",
         recommended_artist: relatedArtworkCards[2]?.artist ?? "Nearby artist with a related subject",
-        image_url: relatedArtworkCards[2]?.image_url ?? "",
+        image_url: requiredArtworkImage(relatedArtworkCards[2]?.image_url, 2),
         location_guidance:
           relatedArtworkCards[2]?.likely_location_detail ??
           "Stay in the same room first and look for a related subject, scene, pose, symbol, or mood; then check adjacent rooms.",
@@ -360,7 +575,7 @@ const server = new McpServer(
         stop: "5. End with contrast",
         recommended_artwork: relatedArtworkCards[3]?.title ?? "Contrast work",
         recommended_artist: relatedArtworkCards[3]?.artist ?? "Nearby contrasting artist",
-        image_url: relatedArtworkCards[3]?.image_url ?? "",
+        image_url: requiredArtworkImage(relatedArtworkCards[3]?.image_url, 3),
         location_guidance:
           relatedArtworkCards[3]?.likely_location_detail ??
           "Choose a nearby work that is visibly different in medium, scale, color, finish, or mood. Use the next adjacent room if the current room is visually uniform.",
@@ -383,6 +598,21 @@ const server = new McpServer(
       titleKnown && artistKnown
         ? `Use the wall label to verify details, but the provided input identifies this as ${title} by ${artist}.`
         : `The exact artwork cannot be confirmed from the available input. Based on the provided description, this appears to be ${identityPhrase}; verify the title, artist, and date on the wall label.`;
+    const trailMapImage = buildTrailMapSvg(museum, room, suggestedMiniTrail);
+    const artworkInfo = {
+      title: titleKnown ? title : "Unknown title - verify on the wall label",
+      artist: artistKnown ? artist : "Unknown artist - verify on the wall label",
+      museum_context: locationPhrase,
+      likely_period_or_movement: movement,
+      subject_or_scene: subject,
+      technique_and_surface: technique,
+      key_interpretation:
+        "Read this work as the anchor for a route through artist, movement, period, subject, visual motifs, and nearby contrasts.",
+      what_is_uncertain:
+        titleKnown && artistKnown
+          ? "Date, medium, current room, and exact nearby works should still be verified on the wall label and museum map."
+          : "Exact title, artist, date, medium, and current room should be verified on the wall label and museum map.",
+    };
 
     const structuredContent = {
       conversation_model: {
@@ -400,7 +630,22 @@ const server = new McpServer(
         (description
           ? `From the visual description: ${description}`
           : "Add a wall-label detail or a fuller visual description if you want a tighter reading."),
+      current_artwork_full_info: artworkInfo,
       confidence_note: confidenceNote,
+      quick_read: {
+        title: titleKnown ? title : "Unknown title",
+        artist: artistKnown ? artist : "Unknown artist",
+        likely_context: movement,
+        one_sentence:
+          description ||
+          "Use the wall label and the visible subject, material, light, and composition to anchor the trail.",
+        verify_first: [
+          "Title",
+          "Artist",
+          "Date",
+          "Movement or gallery label",
+        ],
+      },
       why_it_matters:
         "This artwork can act as a starting point for the room because it opens several routes at once: maker, movement, period, theme, subject, and visual method. The goal is not only to identify it, but to use it as a guide for what to notice next.",
       visual_observation_guide: [
@@ -486,6 +731,18 @@ const server = new McpServer(
       },
       related_artworks_or_artwork_types: relatedArtworksOrTypes,
       related_artwork_cards: relatedArtworkCards,
+      image_display_policy: {
+        required:
+          "Every final user-facing response must include the Related artwork image cards section. Every related artwork card and every recommended trail stop must display an image_url and image markdown.",
+        fallback:
+          "If the exact related artwork image is unavailable, use an illustrative public-domain comparison image and say it is a comparison aid.",
+      },
+      trail_map: {
+        title: "Suggested museum trail map",
+        image_url: trailMapImage,
+        note:
+          "This is a schematic route, not real indoor navigation. Verify exact positions with the current museum map and wall labels.",
+      },
       location_detail_plan: {
         starting_point: room
           ? `Begin from ${room} at ${museum}. Treat this as approximate unless confirmed by a current museum map.`
@@ -528,17 +785,41 @@ const server = new McpServer(
       )
       .join("\n");
 
+    const artworkInfoText = [
+      `- Title: ${artworkInfo.title}`,
+      `- Artist: ${artworkInfo.artist}`,
+      `- Museum context: ${artworkInfo.museum_context}`,
+      `- Likely period / movement: ${artworkInfo.likely_period_or_movement}`,
+      `- Subject / scene: ${artworkInfo.subject_or_scene}`,
+      `- Technique: ${artworkInfo.technique_and_surface}`,
+      `- Key interpretation: ${artworkInfo.key_interpretation}`,
+      `- Verify: ${artworkInfo.what_is_uncertain}`,
+    ].join("\n");
+
+    const relatedCardsText = relatedArtworkCards
+      .map((card, index) => {
+        return [
+          `### ${index + 1}. ${card.title}`,
+          `![${card.title}](${card.image_url})`,
+          `Image URL: ${card.image_url}`,
+          `Artist / period: ${card.artist} · ${card.date_or_period}`,
+          `Why it connects: ${card.why_compare}`,
+          `What to compare: ${card.what_to_notice}`,
+          `Approximate location: ${card.likely_location_detail}`,
+          `Map search terms: ${card.map_search_terms.join(", ")}`,
+          `Viewing question: ${card.viewing_prompt}`,
+        ].join("\n\n");
+      })
+      .join("\n\n");
+
     const miniTrailText = suggestedMiniTrail
       .map((stop) => {
-        const image = stop.image_url
-          ? `\n  Image: ${stop.image_url}\n  ![${stop.recommended_artwork}](${stop.image_url})`
-          : "";
-
         return [
           `### ${stop.stop}`,
           `Recommended stop: ${stop.recommended_artwork}`,
           `Artist / source: ${stop.recommended_artist}`,
-          image,
+          `Image required: ${stop.image_url}`,
+          `![${stop.recommended_artwork}](${stop.image_url})`,
           `Approximate location: ${stop.location_guidance}`,
           `Map search terms: ${stop.map_search_terms.join(", ")}`,
           `What to look for: ${stop.what_to_look_for}`,
@@ -554,31 +835,22 @@ const server = new McpServer(
         {
           type: "text",
           text:
-            `ArtTrail guide ready for ${identityPhrase} at ${locationPhrase}.\n\n` +
-            `## Start with this artwork\n\n` +
-            `${structuredContent.current_artwork_brief}\n\n` +
+            `ArtTrail ready for ${identityPhrase} at ${locationPhrase}.\n\n` +
+            `Important for ChatGPT: preserve the artwork information, related artwork image cards, and mini-trail location guidance below. Do not replace this with a shorter text-only summary.\n\n` +
+            `## Current artwork - museum label view\n\n` +
+            `${artworkInfoText}\n\n` +
             `Confidence: ${structuredContent.confidence_note}\n\n` +
+            `## Quick read for the gallery\n\n` +
+            `${structuredContent.quick_read.one_sentence}\n\n` +
+            `Look first at: composition, light, color, surface, pose or gesture, and the wall-label date/movement.\n\n` +
+            `## Related artwork image cards\n\n` +
+            `${relatedCardsText}\n\n` +
             `## Choose a route\n\n` +
             `${routeChoicesText}\n\n` +
-            `## Related artwork comparisons with images and location guidance\n\n` +
-            relatedArtworkCards
-              .map((card) => {
-                const image = card.image_url
-                  ? `\n![${card.title}](${card.image_url})\n\nImage: ${card.image_url}`
-                  : "";
-                return [
-                  `### ${card.title}`,
-                  image,
-                  `Artist / period: ${card.artist} · ${card.date_or_period}`,
-                  `Why it connects: ${card.why_compare}`,
-                  `What to compare: ${card.what_to_notice}`,
-                  `Location guidance: ${card.likely_location_detail}`,
-                  `Map search terms: ${card.map_search_terms.join(", ")}`,
-                  `Viewing question: ${card.viewing_prompt}`,
-                ].join("\n\n");
-              })
-              .join("\n\n") +
-            `\n\n## Location strategy\n\n` +
+            `## Visual trail map\n\n` +
+            `![Suggested museum trail map](${trailMapImage})\n\n` +
+            `This is a schematic guide, not real indoor navigation. Use the current museum map and wall labels for exact positions.\n\n` +
+            `## Location strategy\n\n` +
             `${structuredContent.location_detail_plan.starting_point}\n\n` +
             `${structuredContent.location_detail_plan.how_to_find_related_works
               .map((item) => `- ${item}`)

@@ -5,7 +5,8 @@ import DocLink from "@/views/components/doc-link.js";
 export default function ToolOutput() {
   // useToolInfo: read the input, output and metadata of the tool that opened this view.
   const { output } = useToolInfo<"generate_art_trail">();
-  const brief = output?.current_artwork_brief;
+  const brief = (output as { current_artwork_brief?: string } | undefined)
+    ?.current_artwork_brief;
 
   return (
     <>

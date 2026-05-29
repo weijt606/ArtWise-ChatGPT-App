@@ -1,0 +1,112 @@
+{
+  "$schema": "https://developers.openai.com/apps-sdk/schemas/chatgpt-app-submission.v1.json",
+  "schema_version": 1,
+  "app_info": {
+    "display_name": "ArtWise",
+    "subtitle": "Museum art trails",
+    "description": "ArtWise helps museum visitors turn one artwork photo or artwork description into a concise guided museum trail. It returns current artwork context, uncertainty notes, visual observation cues, related artwork image cards, map search terms, cautious location guidance, and a 3 to 5 stop mini trail through connected artists, movements, periods, themes, and visual motifs.",
+    "category": "EDUCATION"
+  },
+  "tools": {
+    "warmup_artwise": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Only generates onboarding guidance from optional visitor context and does not modify data.",
+        "open_world_justification": "Does not write to public internet state or any third-party system.",
+        "destructive_justification": "Does not delete, overwrite, revoke access, or perform irreversible actions."
+      }
+    },
+    "generate_art_trail": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Only computes a museum trail from user-provided artwork context and static comparison data.",
+        "open_world_justification": "Does not publish, send, submit, or change public internet state or third-party systems.",
+        "destructive_justification": "Does not delete, overwrite, revoke access, or perform irreversible actions."
+      }
+    }
+  },
+  "test_cases": [
+    {
+      "description": "Give onboarding guidance before the user uploads an artwork photo.",
+      "user_prompt": "Hi, I am in Hamburger Bahnhof in Berlin. How should I use ArtWise?",
+      "file_attachment_urls": null,
+      "tools_triggered": "warmup_artwise",
+      "expected_output": "Returns a brief greeting, asks the user to upload one clear artwork photo, and suggests optional preferences such as artist, history, technique, theme, related works, or a quick walking trail.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Generate a full ArtWise trail from one artwork photo.",
+      "user_prompt": "Use ArtWise. Turn this artwork photo into a guided museum trail.",
+      "file_attachment_urls": null,
+      "tools_triggered": "generate_art_trail",
+      "expected_output": "Returns current artwork details, a confidence note, related artwork image cards, approximate location guidance, map search terms, and a 3 to 5 stop mini trail in the ArtWise widget.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Generate a trail when the user provides museum and gallery context.",
+      "user_prompt": "Use ArtWise. I am in Musee d'Orsay in the Impressionist galleries. Turn this artwork into a 5-stop trail with related artwork images and map search terms.",
+      "file_attachment_urls": null,
+      "tools_triggered": "generate_art_trail",
+      "expected_output": "Returns Impressionist-context artwork guidance, related comparison cards, map search terms, and cautious location guidance that avoids inventing exact room numbers.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Generate a trail from an uncertain artwork identity.",
+      "user_prompt": "Use ArtWise. I do not know the title or artist. Based on this photo, give me a cautious museum trail and tell me what to verify on the wall label.",
+      "file_attachment_urls": null,
+      "tools_triggered": "generate_art_trail",
+      "expected_output": "States that exact identity cannot be confirmed, gives an exploration framework, suggests related artwork types or comparison categories, and asks the user to verify title, artist, date, and room on the wall label.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Generate a trail focused on the artist and nearby comparisons.",
+      "user_prompt": "Use ArtWise. I want to understand this artist and find related works nearby without photographing every painting.",
+      "file_attachment_urls": null,
+      "tools_triggered": "generate_art_trail",
+      "expected_output": "Returns an artist-centered route, related comparison prompts, image-backed cards where available, and practical advice for exploring without repeated photos.",
+      "expected_output_url": null
+    }
+  ],
+  "negative_test_cases": [
+    {
+      "description": "Do not trigger for restaurant booking.",
+      "user_prompt": "Book a restaurant near this museum for tonight.",
+      "file_attachment_urls": null,
+      "tools_triggered": null,
+      "expected_output": "The app should not be invoked because booking restaurants is outside ArtWise's museum trail workflow.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Do not trigger for commerce or artwork purchase requests.",
+      "user_prompt": "Buy a print of this artwork and ship it to me.",
+      "file_attachment_urls": null,
+      "tools_triggered": null,
+      "expected_output": "The app should not be invoked because ArtWise does not support commerce, checkout, or shipping.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Do not claim real indoor navigation.",
+      "user_prompt": "Give me live turn-by-turn directions from this painting to the nearest restroom.",
+      "file_attachment_urls": null,
+      "tools_triggered": null,
+      "expected_output": "The app should not provide real indoor navigation and should explain that it can only give cautious museum-map search guidance for related artworks.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Do not trigger for account or ticket authentication.",
+      "user_prompt": "Log into the museum website and pull up my tickets.",
+      "file_attachment_urls": null,
+      "tools_triggered": null,
+      "expected_output": "The app should not be invoked because it has no authentication flow and does not access museum accounts.",
+      "expected_output_url": null
+    }
+  ]
+}
