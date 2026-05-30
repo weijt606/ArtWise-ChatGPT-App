@@ -4,8 +4,8 @@
   "app_info": {
     "display_name": "ArtWise",
     "subtitle": "Museum art trails",
-    "description": "ArtWise helps museum visitors turn one artwork photo or artwork description into a concise guided museum trail. It returns current artwork context, uncertainty notes, visual observation cues, related artwork image cards, map search terms, cautious location guidance, and a 3 to 5 stop mini trail through connected artists, movements, periods, themes, and visual motifs.",
-    "category": "EDUCATION"
+    "description": "ArtWise helps museum visitors and travelers turn one artwork photo or artwork description into a concise guided museum trail. It returns current artwork context, uncertainty notes, visual observation cues, related artwork image cards, map search terms, cautious location guidance, and a 3 to 5 stop mini trail through connected artists, movements, periods, themes, and visual motifs.",
+    "category": "TRAVEL"
   },
   "tools": {
     "warmup_artwise": {

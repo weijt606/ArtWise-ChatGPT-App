@@ -1,93 +1,84 @@
-# ArtWise ChatGPT App
+# ArtWise
 
-ArtWise is a lightweight ChatGPT App for museum visitors. Its core experience, ArtTrail, turns one photographed or described artwork into a guided museum trail with related artwork comparisons, image cards, map search terms, and cautious location guidance.
+Turn one museum photo into a guided art trail.
 
-Built with Skybridge and exposed to ChatGPT through one MCP tool.
+ArtWise is a lightweight ChatGPT App for museum visitors and travelers. Upload one artwork photo and ArtWise turns it into a compact museum-guide experience: a quick artwork brief, related artwork image cards, visual comparison prompts, map search terms, and a suggested 3 to 5 stop trail.
 
-## What It Does
+## Live Demo
 
-- Explains the current artwork in concise museum-guide language.
-- Gives a confidence note when the artwork identity is uncertain.
-- Suggests route choices such as artist path, movement path, theme path, and visual motif path.
-- Recommends related artworks or comparison categories.
-- Includes comparison images and map search terms for demo-ready artwork cards.
-- Builds a 3 to 5 stop suggested museum trail.
-- Avoids pretending to know exact room numbers when no current museum map data is provided.
+- Alpic Playground: [artwise-51b9fcac.alpic.live/try](https://artwise-51b9fcac.alpic.live/try)
+- Production MCP server: `https://artwise-51b9fcac.alpic.live`
 
-## Product Principle
+## Why ArtWise
 
-Design conversations, not screens.
+Repeatedly photographing every artwork and asking separate questions interrupts a museum visit. ArtWise uses one photo as the starting point for a connected exploration route.
 
-The intended user flow is:
+The goal is not only artwork identification. ArtWise helps visitors understand what to notice next through:
 
-1. The user selects ArtWise in ChatGPT.
-2. The user uploads one museum artwork photo.
-3. ChatGPT calls `generate_art_trail`.
-4. ArtWise returns everything needed in one response: artwork brief, route choices, comparison cards, location strategy, and mini trail.
+- the same artist or artistic circle
+- the same movement or period
+- related subjects and themes
+- similar visual motifs
+- useful contrast works
 
-No database, authentication, crawler, museum API, indoor navigation, or custom image recognition model is required for this hack-night version.
+## Core Experience
 
-## Tools
+1. Select ArtWise in ChatGPT.
+2. Upload one museum artwork photo.
+3. Optionally mention the museum, gallery, or a preference such as artist, history, technique, or a quick trail.
+4. ArtWise renders a museum-guide widget with current artwork context, related artwork images, cautious location guidance, and a mini trail.
+
+ArtWise front-loads the full trail in one tool call. There is no dashboard, database, account system, or multi-step form.
+
+## ChatGPT App Tools
 
 ### `warmup_artwise`
 
-Use this when the user greets ArtWise, says where they are, or asks how to start before uploading a photo.
-
-It returns a short museum-friendly prompt:
-
-- Take one clear artwork photo.
-- Optionally add the museum or gallery name.
-- Optionally say whether you prefer artist, history, technique, theme, related works, or a quick walking trail.
+Returns a short onboarding message before an artwork photo is available. It tells the visitor to upload one clear photo and optionally share a museum location or viewing preference.
 
 ### `generate_art_trail`
 
-Generate a connected museum exploration trail from one photographed or described artwork.
+Generates the full guided museum trail from an artwork photo, description, or conversation context. The tool returns structured content for the ArtWise widget, including:
 
-Inputs are optional because ChatGPT should infer what it can from the photo and conversation:
+- current artwork information and confidence note
+- visual observation guide
+- related artwork image cards
+- comparison prompts
+- approximate location guidance
+- map search terms
+- suggested 3 to 5 stop mini trail
+- next best photo only when clarification is needed
 
-- `visitor_request`
-- `museum_name`
-- `gallery_or_room`
-- `artwork_title`
-- `artist_name`
-- `artwork_description`
-- `user_interest`
-- `known_nearby_artworks`
+## Widget
 
-The tool returns front-loaded `structuredContent` and visible text for ChatGPT, including:
+The ArtWise widget is rendered by the ChatGPT App UI rather than relying on a text response to preserve markdown images. It displays:
 
-- `conversation_model`
-- `current_artwork_brief`
-- `confidence_note`
-- `guided_options`
-- `related_artwork_cards`
-- `trail_map`
-- `location_detail_plan`
-- `suggested_mini_trail`
-- `how_to_explore_without_repeated_photos`
-- `next_best_photo_if_needed`
+- a museum-label-style artwork summary
+- related artwork comparison cards with images
+- a visual route summary
+- trail stops with artwork images and location guidance
 
 ## Demo Prompt
 
-In ChatGPT, connect the app through the Skybridge MCP URL, select ArtWise, upload a museum artwork photo, then ask:
+Upload an artwork photo and ask:
 
 ```text
-Use ArtWise to create a suggested museum trail from this photo. For every trail stop, include the related artwork image, approximate museum location guidance, and map search terms.
+Use ArtWise. Turn this artwork photo into a guided museum trail.
 ```
 
-If the user has not uploaded a photo yet:
+For a location-aware demo:
 
 ```text
-Hi, I am in a museum. How should I start?
+Use ArtWise. I am in Musee d'Orsay in the Impressionist galleries. Turn this artwork into a 5-stop trail with related artwork images and map search terms.
 ```
 
-If ChatGPT needs an explicit instruction to call the tool:
+Before uploading a photo:
 
 ```text
-Call generate_art_trail using the image context. Use Unknown for title, artist, museum, or room if not visible.
+Hi, I am in Hamburger Bahnhof in Berlin. How should I use ArtWise?
 ```
 
-## Development
+## Local Development
 
 Install dependencies:
 
@@ -98,13 +89,25 @@ npm install
 Start Skybridge DevTools:
 
 ```bash
-npm run dev
+npm run dev -- --port 3000
 ```
 
-Start with an Alpic tunnel for ChatGPT testing:
+Open:
+
+```text
+http://localhost:3000/
+```
+
+The local MCP endpoint is:
+
+```text
+http://localhost:3000/mcp
+```
+
+Start with an Alpic tunnel:
 
 ```bash
-npm run dev -- --tunnel
+npm run dev -- --port 3000 --tunnel
 ```
 
 Build:
@@ -119,37 +122,40 @@ Deploy to Alpic:
 npm run deploy
 ```
 
-## Testing In ChatGPT
+## Architecture
 
-Use the MCP URL printed by Skybridge, usually:
+ArtWise is intentionally small:
 
-```text
-https://<your-tunnel-or-production-domain>/mcp
-```
+- Skybridge MCP server
+- React widget for ChatGPT App rendering
+- static public-domain comparison images hosted on Wikimedia Commons
+- Alpic Cloud deployment
 
-Do not test the MCP endpoint by opening it directly in a browser. MCP endpoints expect an MCP client request, so a browser `GET` may return `Method not allowed`.
+This hack-night version does not include:
 
-## Safety And Accuracy
+- authentication
+- a database
+- external museum APIs
+- real indoor navigation
+- live museum collection access
+- custom image recognition models
+- artwork pricing or investment advice
 
-ArtWise intentionally avoids high-risk claims:
+## Accuracy And Safety
 
-- It does not claim exact artwork identity unless the user provides it.
-- It does not fabricate exact museum room numbers.
-- It does not claim live access to museum collections or maps.
-- It asks the user to verify title, artist, date, and room on the wall label or current museum map.
-- Related artwork images are demo comparison assets and should be treated as comparison aids, not proof that a work is currently nearby.
+ArtWise uses cautious language when information is incomplete:
 
-## Public Repo Hygiene
+- It does not claim an exact artwork identity when the input is uncertain.
+- It does not fabricate room numbers or current display locations.
+- It asks visitors to verify title, artist, date, medium, and room using wall labels or the museum map.
+- Related artwork images are visual comparison aids, not proof that a work is currently nearby or on view.
 
-This repository is safe to publish because it should not include:
+## Submission Materials
 
-- `.env` files
-- API keys
-- Alpic local project bindings
-- tunnel URLs
-- local build output
-- `node_modules`
+- [Privacy policy](./PRIVACY.md)
+- [ChatGPT submission notes](./CHATGPT_SUBMISSION.md)
+- [ChatGPT submission JSON](./chatgpt-app-submission.json)
 
-Before pushing, scan tracked files for API keys, local tunnel URLs, session IDs, Alpic team/project/environment IDs, and personal account details.
+## License
 
-Expected result: no real credentials or local deployment identifiers in tracked files.
+This repository is an ArtWise prototype built for a hack-night demo.
