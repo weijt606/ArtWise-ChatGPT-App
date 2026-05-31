@@ -5,7 +5,7 @@
 - Display name: ArtWise
 - Subtitle: Museum art trails
 - Category: EDUCATION
-- Production MCP Server URL: `https://artwise-51b9fcac.alpic.live`
+- Production MCP Server URL: `https://artwise-51b9fcac.alpic.live/mcp`
 - Playground URL: `https://artwise-51b9fcac.alpic.live/try`
 - Privacy policy URL: `https://github.com/weijt606/ArtWise-ChatGPT-App/blob/main/PRIVACY.md`
 

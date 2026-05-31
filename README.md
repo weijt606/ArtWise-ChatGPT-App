@@ -7,7 +7,7 @@ ArtWise is a lightweight ChatGPT App for museum visitors and travelers. Upload o
 ## Live Demo
 
 - Alpic Playground: [artwise-51b9fcac.alpic.live/try](https://artwise-51b9fcac.alpic.live/try)
-- Production MCP server: `https://artwise-51b9fcac.alpic.live`
+- Production MCP server: `https://artwise-51b9fcac.alpic.live/mcp`
 
 ## Why ArtWise
 
@@ -153,6 +153,7 @@ ArtWise uses cautious language when information is incomplete:
 ## Submission Materials
 
 - [Privacy policy](./PRIVACY.md)
+- [Terms of service](./TERMS.md)
 - [ChatGPT submission notes](./CHATGPT_SUBMISSION.md)
 - [ChatGPT submission JSON](./chatgpt-app-submission.json)
 

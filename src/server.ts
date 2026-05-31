@@ -11,6 +11,40 @@ function isKnown(value?: string) {
   return !unknownValues.has(clean(value).toLowerCase());
 }
 
+function hasUsefulText(value?: string) {
+  return (clean(value).match(/[\p{L}\p{N}]/gu) ?? []).length >= 3;
+}
+
+function hasUsefulTrailInput(input: {
+  visitor_request?: string;
+  museum_name?: string;
+  gallery_or_room?: string;
+  artwork_title?: string;
+  artist_name?: string;
+  artwork_description?: string;
+  user_interest?: string;
+  known_nearby_artworks?: string;
+}) {
+  const artworkContext = [
+    input.museum_name,
+    input.gallery_or_room,
+    input.artwork_title,
+    input.artist_name,
+    input.artwork_description,
+    input.known_nearby_artworks,
+  ].some(hasUsefulText);
+
+  if (artworkContext) return true;
+
+  const request = `${clean(input.visitor_request)} ${clean(input.user_interest)}`;
+  return (
+    hasUsefulText(request) &&
+    /\b(art|artwork|artist|museum|gallery|painting|photo|trail|exhibit|sculpture|history|technique|movement)\b/i.test(
+      request,
+    )
+  );
+}
+
 function splitNearbyArtworks(value: string) {
   return value
     .split(/[\n;,]+/)
@@ -307,6 +341,58 @@ function requiredArtworkImage(imageUrl: string | undefined, index: number) {
   return clean(imageUrl) || fallbackArtworkImages[index % fallbackArtworkImages.length];
 }
 
+const warmupOutputSchema = {
+  greeting: z.string(),
+  short_response: z.string(),
+  what_to_send_next: z.array(z.string()),
+  example_preferences: z.array(z.string()),
+  next_prompt: z.string(),
+};
+
+const trailOutputSchema = {
+  current_artwork_brief: z.string(),
+  current_artwork_full_info: z.object({
+    title: z.string(),
+    artist: z.string(),
+    museum_context: z.string(),
+    likely_period_or_movement: z.string(),
+    subject_or_scene: z.string(),
+    technique_and_surface: z.string(),
+    key_interpretation: z.string(),
+    what_is_uncertain: z.string(),
+  }),
+  confidence_note: z.string(),
+  related_artwork_cards: z.array(
+    z.object({
+      title: z.string(),
+      artist: z.string(),
+      date_or_period: z.string(),
+      likely_location_detail: z.string(),
+      map_search_terms: z.array(z.string()),
+      image_url: z.string(),
+      image_required: z.boolean(),
+      why_compare: z.string(),
+      what_to_notice: z.string(),
+      viewing_prompt: z.string(),
+    }),
+  ),
+  suggested_mini_trail: z.array(
+    z.object({
+      stop: z.string(),
+      recommended_artwork: z.string(),
+      recommended_artist: z.string(),
+      image_url: z.string(),
+      location_guidance: z.string(),
+      map_search_terms: z.array(z.string()),
+      what_to_look_for: z.string(),
+      why_connected: z.string(),
+      how_it_changes_understanding: z.string(),
+    }),
+  ),
+  room_or_location_guidance: z.string(),
+  next_best_photo_if_needed: z.string(),
+};
+
 const server = new McpServer(
   {
     name: "ArtWise",
@@ -329,6 +415,7 @@ const server = new McpServer(
           .optional()
           .describe("Museum, city, station, or rough location if the user mentioned one."),
       },
+      outputSchema: warmupOutputSchema,
       annotations: {
         title: "Start ArtWise",
         readOnlyHint: true,
@@ -388,7 +475,7 @@ const server = new McpServer(
   {
     name: "generate_art_trail",
     description:
-      "Use this whenever the user selects ArtWise and shares a museum artwork photo, artwork description, or asks for a museum trail, related artworks, comparison images, where to go next, map search terms, or location guidance. Do not just identify or explain the artwork; generate the full ArtWise trail. The final answer must preserve the image-backed related artwork cards and the mini-trail location guidance from this tool result. If the user only provides a photo, infer cautious visual context from the image and pass unknown text fields as empty or Unknown.",
+      "Generate a complete ArtWise museum exploration trail from a photographed or described artwork. Returns a concise artwork brief, confidence note, related artwork image cards, comparison guidance, map search terms, approximate location guidance, and a mini trail. Unknown artwork details may be passed as empty or Unknown.",
     inputSchema: {
       visitor_request: z
         .string()
@@ -428,6 +515,7 @@ const server = new McpServer(
           "Known nearby artworks, artists, or gallery context. Can be empty.",
         ),
     },
+    outputSchema: trailOutputSchema,
     annotations: {
       title: "Generate ArtTrail",
       readOnlyHint: true,
@@ -449,6 +537,19 @@ const server = new McpServer(
     },
   },
   async (input) => {
+    if (!hasUsefulTrailInput(input)) {
+      return {
+        content: [
+          {
+            type: "text",
+            text:
+              "I need one clear artwork photo, a short visual description, or a wall-label detail before I can build a reliable ArtTrail. Please upload the artwork photo or tell me the museum, artist, title, or what you can see.",
+          },
+        ],
+        isError: true,
+      };
+    }
+
     const museum = clean(input.museum_name) || "the museum";
     const room = clean(input.gallery_or_room);
     const titleKnown = isKnown(input.artwork_title);
@@ -836,7 +937,6 @@ const server = new McpServer(
           type: "text",
           text:
             `ArtTrail ready for ${identityPhrase} at ${locationPhrase}.\n\n` +
-            `Important for ChatGPT: preserve the artwork information, related artwork image cards, and mini-trail location guidance below. Do not replace this with a shorter text-only summary.\n\n` +
             `## Current artwork - museum label view\n\n` +
             `${artworkInfoText}\n\n` +
             `Confidence: ${structuredContent.confidence_note}\n\n` +
